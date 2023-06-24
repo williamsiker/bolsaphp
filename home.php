@@ -80,8 +80,11 @@ if (!isset($_SESSION['username'])) {
                     Detener Simulacion (RANDOM)
                 </button>
 
+                <input type="number" id="rcapital" name="rcapital">
+                <label for="rcapital">Capital de Inicio (RANDOM)</label>
 
-                <!-- Modal -->
+
+                <!-- Modal (API)-->
                 <div class="modal fade" id="myModal">
                     <div class="modal-dialog">
                         <div class="modal-content">
@@ -193,17 +196,22 @@ if (!isset($_SESSION['username'])) {
         <script>
             const ctx = document.getElementById('signalChart').getContext('2d');
             $(document).ready(function(){
-
+                let intervalID;
+                let signalChart;    
+                let currentIndex = 0;
                 //Consulta a la API
                 $('#myForm').submit(function(event) {
                     event.preventDefault();
-                    var formData = new FormData(this);
+                    let formData = new FormData(this);
 
                     // Acceder a los datos de formData
-                    var symbol = formData.get('symbol');
-                    var startDate = formData.get('start_date');
-                    var endDate = formData.get('end_date');
-                    var capital = formData.get('capital');
+                    let symbol = formData.get('symbol');
+                    let startDate = formData.get('start_date');
+                    let endDate = formData.get('end_date');
+                    let capital = formData.get('capital');
+                    if (signalChart) {
+                                signalChart.destroy();
+                    }
                     $.ajax({
                         url: 'simular.php',
                         method: 'POST',
@@ -214,36 +222,26 @@ if (!isset($_SESSION['username'])) {
                             end_date: endDate,
                             capital: capital
                         },
-                        success: function(respuesta)
+                        success: function(response)
                         {
-                            // Acceder a los valores devueltos en la respuesta
+                            //$('#myModal').modal('hide');
                             // console.log(respuesta);
-                            const modified_data = Object.values(respuesta.modified_data);
-                            const signals = respuesta.signals;
-                            const signalValues = respuesta.signalValues;
+                            let modified_data = Object.values(response);
 
-                            var signalChart = new Chart(ctx, {
+                            signalChart = new Chart(ctx, {
                                 type: 'line',
                                 data: {
-                                labels: modified_data.map(function(item) {
-                                    return item['Date'];
-                                }),
-                                datasets: [{
-                                    label: 'Precio Accion ' + symbol,
-                                    data: modified_data.map(function(item) {
-                                        return item['Close'];
-                                    }),
-                                    backgroundColor: 'rgba(0, 123, 255, 0.5)',
-                                    borderColor: 'rgba(0, 123, 255, 1)',
-                                    borderWidth: 1,
-                                    pointBackgroundColor: function(context) {
-                                        var index = context.dataIndex;
-                                        var signal = signals[index];
-                                        return signal === 'BUY' ? 'rgba(0, 143, 57)' : 'rgba(255, 0, 0, 1)';
-                                    },
-                                    pointRadius: 3,
-                                    pointHoverRadius: 5
-                                }]
+                                    labels:[],
+                                    datasets: [{
+                                        label: 'Precio Accion Random ',
+                                        data: [],
+                                        backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                                        borderColor: 'rgba(0, 123, 255, 1)',
+                                        borderWidth: 1,
+                                        pointRadius: 3,
+                                        pointBackgroundColor: [],
+                                        pointHoverRadius: 5
+                                    }]
                                 },
                                 options: {
                                 responsive: true,
@@ -265,6 +263,23 @@ if (!isset($_SESSION['username'])) {
                                 }
                                 }
                             });
+
+                            console.log(response);
+                            // Actualizar la gráfica cada segundo
+                            intervalID = setInterval(function() {
+                                if (response[currentIndex] && response[currentIndex]['Date']) {
+                                    // Agregar un punto al gráfico
+                                    signalChart.data.labels.push(response[currentIndex]['Date']);
+                                    signalChart.data.datasets[0].data.push(response[currentIndex]['Close']);
+                                    let signalColor = response[currentIndex]['Signal'] === 'BUY' ? 'rgba(0, 143, 57)' : 'rgba(255, 0, 0, 1)';
+                                    signalChart.data.datasets[0].pointBackgroundColor.push(signalColor); 
+                                    signalChart.update();
+                                    currentIndex++;
+                                } else {
+                                    // Si se alcanza el final de los datos, detener la simulación
+                                    clearInterval(intervalID);
+                                }
+                            }, 1000);
                             //graficar(respuesta);
                         } ,
                         error: function(xhr, status, error)
@@ -275,8 +290,7 @@ if (!isset($_SESSION['username'])) {
                 });
 
                 //Simulacion con funciones Random
-                var intervalID;
-                var signalChart;
+                
                 $('#random').on('click', function(event) {
                     event.preventDefault();
 
@@ -290,15 +304,15 @@ if (!isset($_SESSION['username'])) {
                     }
 
                     function generarFechaAleatoria() {
-                        const start = new Date(2022, 0, 1);
-                        const end = new Date(2022, 11, 31);
+                        const start = new Date(2022, 1, 1);
+                        const end = new Date(2022, 5, 31);
                         return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
                     }
 
                     function generarSimulacionTrading() {
                         const datosSimulacion = [];
 
-                        for (let i = 0; i < 100; i++) {
+                        for (let i = 0; i < 50; i++) {
                             const dato = {
                             "Adj Close": generarDatoAleatorio(150, 200),
                             "Close": generarDatoAleatorio(160, 170),
@@ -306,14 +320,19 @@ if (!isset($_SESSION['username'])) {
                             "High": generarDatoAleatorio(170, 180),
                             "Low": generarDatoAleatorio(150, 160),
                             "Open": generarDatoAleatorio(160, 170),
-                            "Portfolio Value": generarDatoAleatorio(10, 20),
                             "Shares": Math.floor(generarDatoAleatorio(50, 100)),
-                            "Signal": Math.random() < 0.5 ? "BUY" : "SELL",
+                            "Signal": "",
                             "Volume": Math.floor(generarDatoAleatorio(10000000, 20000000))
                             };
 
                             datosSimulacion.push(dato);
                         }
+
+                        datosSimulacion.sort(function(a, b){
+                            const dateA = new Date(a.Date);
+                            const dateB = new Date(b.Date);
+                            return dateA.getTime() - dateB.getTime();
+                        })
 
                         return {
                             modified_data: datosSimulacion
@@ -322,38 +341,54 @@ if (!isset($_SESSION['username'])) {
 
                     // Ejemplo de uso
                     const simulacion = generarSimulacionTrading();
-                    console.log(simulacion);
-                    console.log(typeof simulacion);
-                    const modified_data = Object.values(simulacion.modified_data);
-                    const signals = simulacion.signals;
-                    const signalValues = simulacion.signalValues;
+                    modified_data = Object.values(simulacion.modified_data);
+                    console.log(modified_data)
+                    const jsonData = JSON.stringify(modified_data);
+                    let capital = $('#rcapital').val();
+
+                    $.ajax({
+                        type: 'POST',
+                        url: 'rsimular.php',
+                        data: {data: jsonData, capital: capital},
+                        dataType: 'json',
+                        success: function(response){
+                            console.log(response);
+                            // Actualizar la gráfica cada segundo
+                            intervalID = setInterval(function() {
+                                if (currentIndex < modified_data.length) {
+                                    // Agregar un punto al gráfico
+                                    signalChart.data.labels.push(response[currentIndex]['Date']);
+                                    signalChart.data.datasets[0].data.push(response[currentIndex]['Close']);
+                                    let signalColor = response[currentIndex]['Signal'] === 'BUY' ? 'rgba(0, 143, 57)' : 'rgba(255, 0, 0, 1)';
+                                    signalChart.data.datasets[0].pointBackgroundColor.push(signalColor); 
+                                    signalChart.update();
+                                    currentIndex++;
+                                } else {
+                                    // Si se alcanza el final de los datos, detener la simulación
+                                    clearInterval(intervalID);
+                                }
+                            }, 1000);
+                        },
+                        error: function(jqXHR, textStatus, errorThrown) {
+                            console.log('Error', textStatus, errorThrown);
+                        }
+                    })
 
                     // Crear el gráfico con Chart.js
-                    console.log(typeof modified_data);
-                    console.log(modified_data);
-                    console.log(signalValues);
                     signalChart = new Chart(ctx, {
                         type: 'line',
                         data: {
-                        labels: modified_data.map(function(item) {
-                            return item['Date'];
-                        }),
-                        datasets: [{
-                            label: 'Precio Accion Random ',
-                            data: modified_data.map(function(item) {
-                                return item['Close'];
-                            }),
-                            backgroundColor: 'rgba(0, 123, 255, 0.5)',
-                            borderColor: 'rgba(0, 123, 255, 1)',
-                            borderWidth: 1,
-                            pointBackgroundColor: function(context) {
-                                var index = context.dataIndex;
-                                var signal = modified_data[index]['Signal'];
-                                return signal === 'BUY' ? 'rgba(0, 143, 57)' : 'rgba(255, 0, 0, 1)';
-                            },
-                            pointRadius: 3,
-                            pointHoverRadius: 5
-                        }]
+                            labels:[],
+                            datasets: [{
+                                label: 'Precio Accion Random ',
+                                data: [],
+                                backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                                borderColor: 'rgba(0, 123, 255, 1)',
+                                borderWidth: 1,
+                                pointRadius: 3,
+                                pointBackgroundColor: [],
+                                pointHoverRadius: 5
+                            }]
                         },
                         options: {
                         responsive: true,
@@ -375,31 +410,7 @@ if (!isset($_SESSION['username'])) {
                         }
                         }
                     });
-
-                    intervalID = setInterval(function() {
-                        // Generar nuevos datos simulados
-                        const simulacion = generarSimulacionTrading();
-                        const modified_data = Object.values(simulacion.modified_data);
-
-                        // Actualizar los datos del gráfico
-                        signalChart.data.labels = modified_data.map(function(item) {
-                        return item['Date'];
-                        });
-
-                        signalChart.data.datasets[0].data = modified_data.map(function(item) {
-                        return item['Close'];
-                        });
-
-                        signalChart.data.datasets[0].pointBackgroundColor = function(context) {
-                        var index = context.dataIndex;
-                        var signal = modified_data[index]['Signal'];
-                        return signal === 'BUY' ? 'rgba(0, 143, 57)' : 'rgba(255, 0, 0, 1)';
-                        };
-
-                        // Actualizar el gráfico
-                        signalChart.update();
-                    }, 1000);
-                    //graficar(simulacion);
+                    
                 });
 
                 $('#stop').on('click', function(event) {

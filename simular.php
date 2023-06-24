@@ -43,14 +43,9 @@ if (isset($data['Time Series (Daily)'])) {
     }, $signals);
 
     //print_r($signalValues);
-    $respuesta = array(
-      'modified_data' => $modified_data,
-      'signals' => $signals,
-      'signalValues' => $signalValues
-    );
 
     header('Content-Type: application/json');
-    echo json_encode($respuesta);
+    echo json_encode($modified_data);
 
 } else {
     echo 'No se encontraron datos del historial de precios.';
@@ -72,7 +67,7 @@ function simulate_trading($stock_data, $capital) {
 
       $previous_row = $stock_data[intval($index) - 1];
 
-      if ($row['Close'] > $previous_row['Close']) {
+      if ($row['Close'] < $previous_row['Close']) {
           if ($position == 'SELL') {
               $portfolio_value += $total_shares * $row['Close'];
               $total_shares = 0;
@@ -87,7 +82,7 @@ function simulate_trading($stock_data, $capital) {
           $stock_data[$index]['Shares'] = $total_shares; 
           $stock_data[$index]['Portfolio Value'] = $portfolio_value;  
           //echo "BUY: " . $row['Date'] . " - Price: " . $buy_price . " - Shares: " . $total_shares . " - Portfolio Value: " . $portfolio_value . "\n";
-      } elseif ($row['Close'] < $previous_row['Close']) {
+      } elseif ($row['Close'] > $previous_row['Close']) {
           if ($position == 'BUY') {
               $portfolio_value += $total_shares * $row['Close'];
               $total_shares = 0;
