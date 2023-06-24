@@ -65,6 +65,7 @@ if (!isset($_SESSION['username'])) {
                     <div class="divider-custom-icon"><i class="fas fa-star"></i></div>
                     <div class="divider-custom-line"></div>
                 </div>
+
                 <!-- Portfolio Grid Items-->
                  <!-- Button trigger modal -->
                 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal" data-animation="true">
@@ -111,6 +112,7 @@ if (!isset($_SESSION['username'])) {
 
             </div>
         </section>
+
         <!-- Footer-->
         <footer class="footer text-center">
             <div class="container">
@@ -144,16 +146,18 @@ if (!isset($_SESSION['username'])) {
                 </div>
             </div>
         </footer>
+
         <!-- Copyright Section-->
         <div class="copyright py-4 text-center text-white">
             <div class="container"><small>Copyright © Your Website 2020</small></div>
         </div>
+
         <!-- Scroll to Top Button (Only visible on small and extra-small screen sizes)-->
         <div class="scroll-to-top d-lg-none position-fixed">
             <a class="js-scroll-trigger d-block text-center text-white rounded" href="#page-top"><i class="fa fa-chevron-up"></i></a>
         </div>
+
         <!-- Portfolio Modals-->
-        <!-- Portfolio Modal 1-->
         <div class="portfolio-modal modal fade" id="portfolioModal1" tabindex="-1" role="dialog" aria-labelledby="portfolioModal1Label" aria-hidden="true">
             <div class="modal-dialog modal-xl" role="document">
                 <div class="modal-content">
@@ -186,10 +190,11 @@ if (!isset($_SESSION['username'])) {
             </div>
         </div>
 
-
         <script>
             const ctx = document.getElementById('signalChart').getContext('2d');
             $(document).ready(function(){
+
+                //Consulta a la API
                 $('#myForm').submit(function(event) {
                     event.preventDefault();
                     var formData = new FormData(this);
@@ -269,9 +274,17 @@ if (!isset($_SESSION['username'])) {
                     });
                 });
 
+                //Simulacion con funciones Random
                 var intervalID;
+                var signalChart;
                 $('#random').on('click', function(event) {
                     event.preventDefault();
+
+                    if (signalChart) {
+                        // Si ya hay un gráfico, destruirlo
+                        signalChart.destroy();
+                    }
+
                     function generarDatoAleatorio(min, max) {
                         return Math.random() * (max - min) + min;
                     }
@@ -319,7 +332,7 @@ if (!isset($_SESSION['username'])) {
                     console.log(typeof modified_data);
                     console.log(modified_data);
                     console.log(signalValues);
-                    var signalChart = new Chart(ctx, {
+                    signalChart = new Chart(ctx, {
                         type: 'line',
                         data: {
                         labels: modified_data.map(function(item) {
@@ -390,14 +403,12 @@ if (!isset($_SESSION['username'])) {
                 });
 
                 $('#stop').on('click', function(event) {
-                event.preventDefault();
-                
-                // Detener la simulación
-                clearInterval(intervalID);
+                    event.preventDefault();
+                    // Detener la simulación
+                    clearInterval(intervalID);
                 });
 
-            })
-                
+            });             
             
         </script>
         
