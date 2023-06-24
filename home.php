@@ -6,119 +6,8 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
-function simulate_trading($stock_data, $capital) {
-    $position = null;
-    $buy_price = 0.0;
-    $total_shares = 0;
-    $portfolio_value = $capital;
 
-    $stock_data['Signal'] = '';  
-
-    foreach ($stock_data as $index => &$row) {
-        if (intval($index) == 0) {
-            continue;
-        }
-
-        $previous_row = $stock_data[intval($index) - 1];
-
-        if ($row['Close'] > $previous_row['Close']) {
-            if ($position == 'SELL') {
-                $portfolio_value += $total_shares * $row['Close'];
-                $total_shares = 0;
-            }
-
-            $position = 'BUY';
-            $buy_price = $row['Close'];
-            $total_shares = intval($portfolio_value / $buy_price);
-            $portfolio_value -= $total_shares * $buy_price;
-
-            $stock_data[$index]['Signal'] = 'BUY';  
-            $stock_data[$index]['Shares'] = $total_shares; 
-            $stock_data[$index]['Portfolio Value'] = $portfolio_value;  
-            //echo "BUY: " . $row['Date'] . " - Price: " . $buy_price . " - Shares: " . $total_shares . " - Portfolio Value: " . $portfolio_value . "\n";
-        } elseif ($row['Close'] < $previous_row['Close']) {
-            if ($position == 'BUY') {
-                $portfolio_value += $total_shares * $row['Close'];
-                $total_shares = 0;
-            }
-
-            $position = 'SELL';
-            $sell_price = $row['Close'];
-            $total_shares = intval($total_shares);
-            $portfolio_value += $total_shares * $sell_price;
-
-            $stock_data[$index]['Signal'] = 'SELL';  
-            $stock_data[$index]['Shares'] = $total_shares;  
-            $stock_data[$index]['Portfolio Value'] = $portfolio_value;  
-            //echo "SELL: " . $row['Date'] . " - Price: " . $sell_price . " - Shares: " . $total_shares . " - Portfolio Value: " . $portfolio_value . "\n";
-        }
-    }
-
-    return $stock_data;
-}
-
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $symbol = $_POST['symbol'];
-    $start_date = $_POST['start_date'];
-    $end_date = $_POST['end_date'];
-    $capital = intval($_POST['capital']);
-
-    $api_key = 'IE6F252F3FWX1UUO';
-
-    $url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=$symbol&apikey=$api_key&outputsize=full";
-
-    $response = file_get_contents($url);
-    $data = json_decode($response, true);
-
-    if (isset($data['Time Series (Daily)'])) {
-        $timeSeries = $data['Time Series (Daily)'];
-        $df = array();
-
-        foreach ($timeSeries as $date => $values) {
-            if ($start_date <= $date && $date <= $end_date) {
-                $row = array(
-                    'Date' => $date,
-                    'Open' => floatval($values['1. open']),
-                    'High' => floatval($values['2. high']),
-                    'Low' => floatval($values['3. low']),
-                    'Close' => floatval($values['4. close']),
-                    'Adj Close' => floatval($values['5. adjusted close']),
-                    'Volume' => floatval($values['6. volume'])
-                );
-                $df[] = $row;
-            }
-        }
-
-        /* Imprimir el dataframe
-        echo '<pre>';
-        print_r($df);
-        echo '</pre>';*/
-        $modified_data = simulate_trading($df,$capital);
-        $signals = array_column($modified_data, 'Signal');
-        $signalValues = array_map(function($signal) {
-            if ($signal === 'BUY') {
-                return '1';
-            } elseif ($signal === 'SELL') {
-                return '-1';
-            } else {
-                return 0;
-            }
-        }, $signals);
-
-        //print_r($signalValues);
-
-    } else {
-        echo 'No se encontraron datos del historial de precios.';
-    }
-    
-    
-}
 ?>
-
-
-
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -141,10 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <!-- JS de Bootstrap (jQuery primero, luego Popper.js y finalmente el archivo JS de Bootstrap) -->
         <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"  crossorigin="anonymous" ></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymus"></script>
+
+        
     </head>
     <body id="page-top">
         <!-- Navigation-->
@@ -153,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a class="navbar-brand js-scroll-trigger" href="#page-top">Home Page</a>
                 <div class="collapse navbar-collapse" id="navbarResponsive">
                     <ul class="navbar-nav ml-auto">
-                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded js-scroll-trigger" href="#portfolio">{{current_user.fullname}}</a></li>
+                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded js-scroll-trigger" href="#portfolio"><?php echo $_SESSION['username']; ?></a></li>
                         <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded js-scroll-trigger" href="#about">About</a></li>
                         <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded js-scroll-trigger" href="{{url_for('logout')}}">Logout</a></li>
                     </ul>
@@ -176,7 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <!-- Portfolio Grid Items-->
                  <!-- Button trigger modal -->
                 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal" data-animation="true">
-                Iniciar Simulacion (API)
+                Consultar Datos (API) - Simular Consulta
+                </button>
+
+                <button type="button" class="btn btn-primary" id="random">
+                    Iniciar Simulacion (RANDOM)
+                </button>
+
+                <button type="button" class="btn btn-danger" id="stop">
+                    Detener Simulacion (RANDOM)
                 </button>
 
 
@@ -189,20 +89,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
                         </div>
                         <div class="modal-body">
-                            <form method="POST" action="home.php">
+                            <!--Cmabiando de home.php a simular.php action="simular.php" -->
+                            <form id="myForm" method="POST">
                                 <label for="symbol">Símbolo de acción:</label>
                                 <input type="text" id="symbol" name="symbol" required><br><br>
                                 <label for="start_date">Fecha de inicio:</label>
                                 <input type="date" id="start_date" name="start_date" required><br><br>
                                 <label for="end_date">Fecha de fin:</label>
                                 <input type="date" id="end_date" name="end_date" required><br><br>
+                                <label for="capital">Capital de Inicio</label>
                                 <input type="number" id="capital" name="capital" required><br><br>
                                 <input type="submit" value="Consultar">
                             </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
-                            <button type="button" class="btn btn-primary">Guardar</button>
                         </div>
                         </div>
                     </div>
@@ -274,8 +172,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <div class="divider-custom-icon"><i class="fas fa-star"></i></div>
                                         <div class="divider-custom-line"></div>
                                     </div>
-                                    <!-- Portfolio Modal - Image-->
-                                    <img class="img-fluid rounded mb-5" src="/stock_chart.png" alt="" />
                                     <!-- Portfolio Modal - Text-->
                                     <p class="mb-5">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Mollitia neque assumenda ipsam nihil, molestias magnam, recusandae quos quis inventore quisquam velit asperiores, vitae? Reprehenderit soluta, eos quod consequuntur itaque. Nam.</p>
                                     <button class="btn btn-primary" data-dismiss="modal">
@@ -289,63 +185,228 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
         </div>
-        <script>
-        
-        /* Extrae las fechas y señales del arreglo $stock_data
-        var dates = <?php echo json_encode(array_column($modified_data, 'Date')); ?>;
-        var signals = <?php echo json_encode(array_column($modified_data, 'Signal')); ?>;*/
 
-        var dates = <?php echo isset($modified_data) ? json_encode(array_column($modified_data, 'Date')) : '[]'; ?>;
-        //var signals = <?php echo isset($modified_data) ? json_encode(array_column($modified_data, 'Signal')) : '[]'; ?>;
-        var signals = <?php echo json_encode($signalValues); ?>
-        // Crea un nuevo gráfico con Chart.js
-        var ctx = document.getElementById('signalChart').getContext('2d');
-        var signalChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: dates,
-                datasets: [{
-                    label: 'Precio Accion <?php echo $symbol ?>',
-                    data: <?php echo json_encode(array_column($modified_data, 'Close')); ?>, //signals,
-                    backgroundColor: 'rgba(0, 123, 255, 0.5)',
-                    borderColor: 'rgba(0, 123, 255, 1)',
-                    borderWidth: 1,
-                    pointBackgroundColor: function(context) {
-                        var index = context.dataIndex;
-                        var signal = signals[index];
-                        return signal === '1' ? 'rgba(0,143,57)' : 'rgba(255, 0, 0, 1)';
-                    },
-                    pointRadius: 3,
-                    pointHoverRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Fecha'
+
+        <script>
+            const ctx = document.getElementById('signalChart').getContext('2d');
+            $(document).ready(function(){
+                $('#myForm').submit(function(event) {
+                    event.preventDefault();
+                    var formData = new FormData(this);
+
+                    // Acceder a los datos de formData
+                    var symbol = formData.get('symbol');
+                    var startDate = formData.get('start_date');
+                    var endDate = formData.get('end_date');
+                    var capital = formData.get('capital');
+                    $.ajax({
+                        url: 'simular.php',
+                        method: 'POST',
+                        dataType: 'json',
+                        data: {
+                            symbol: symbol,
+                            start_date: startDate,
+                            end_date: endDate,
+                            capital: capital
+                        },
+                        success: function(respuesta)
+                        {
+                            // Acceder a los valores devueltos en la respuesta
+                            // console.log(respuesta);
+                            const modified_data = Object.values(respuesta.modified_data);
+                            const signals = respuesta.signals;
+                            const signalValues = respuesta.signalValues;
+
+                            var signalChart = new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                labels: modified_data.map(function(item) {
+                                    return item['Date'];
+                                }),
+                                datasets: [{
+                                    label: 'Precio Accion ' + symbol,
+                                    data: modified_data.map(function(item) {
+                                        return item['Close'];
+                                    }),
+                                    backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                                    borderColor: 'rgba(0, 123, 255, 1)',
+                                    borderWidth: 1,
+                                    pointBackgroundColor: function(context) {
+                                        var index = context.dataIndex;
+                                        var signal = signals[index];
+                                        return signal === 'BUY' ? 'rgba(0, 143, 57)' : 'rgba(255, 0, 0, 1)';
+                                    },
+                                    pointRadius: 3,
+                                    pointHoverRadius: 5
+                                }]
+                                },
+                                options: {
+                                responsive: true,
+                                scales: {
+                                    x: {
+                                    display: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Fecha'
+                                    }
+                                    },
+                                    y: {
+                                    display: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Señal'
+                                    }
+                                    }
+                                }
+                                }
+                            });
+                            //graficar(respuesta);
+                        } ,
+                        error: function(xhr, status, error)
+                        {
+                            console.log(error);
                         }
-                    },
-                    y: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Señal'
-                        }
+                    });
+                });
+
+                var intervalID;
+                $('#random').on('click', function(event) {
+                    event.preventDefault();
+                    function generarDatoAleatorio(min, max) {
+                        return Math.random() * (max - min) + min;
                     }
-                }
-            }
-        });
-    </script>
+
+                    function generarFechaAleatoria() {
+                        const start = new Date(2022, 0, 1);
+                        const end = new Date(2022, 11, 31);
+                        return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+                    }
+
+                    function generarSimulacionTrading() {
+                        const datosSimulacion = [];
+
+                        for (let i = 0; i < 100; i++) {
+                            const dato = {
+                            "Adj Close": generarDatoAleatorio(150, 200),
+                            "Close": generarDatoAleatorio(160, 170),
+                            "Date": generarFechaAleatoria().toISOString().split('T')[0],
+                            "High": generarDatoAleatorio(170, 180),
+                            "Low": generarDatoAleatorio(150, 160),
+                            "Open": generarDatoAleatorio(160, 170),
+                            "Portfolio Value": generarDatoAleatorio(10, 20),
+                            "Shares": Math.floor(generarDatoAleatorio(50, 100)),
+                            "Signal": Math.random() < 0.5 ? "BUY" : "SELL",
+                            "Volume": Math.floor(generarDatoAleatorio(10000000, 20000000))
+                            };
+
+                            datosSimulacion.push(dato);
+                        }
+
+                        return {
+                            modified_data: datosSimulacion
+                        };
+                    }
+
+                    // Ejemplo de uso
+                    const simulacion = generarSimulacionTrading();
+                    console.log(simulacion);
+                    console.log(typeof simulacion);
+                    const modified_data = Object.values(simulacion.modified_data);
+                    const signals = simulacion.signals;
+                    const signalValues = simulacion.signalValues;
+
+                    // Crear el gráfico con Chart.js
+                    console.log(typeof modified_data);
+                    console.log(modified_data);
+                    console.log(signalValues);
+                    var signalChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                        labels: modified_data.map(function(item) {
+                            return item['Date'];
+                        }),
+                        datasets: [{
+                            label: 'Precio Accion Random ',
+                            data: modified_data.map(function(item) {
+                                return item['Close'];
+                            }),
+                            backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            borderWidth: 1,
+                            pointBackgroundColor: function(context) {
+                                var index = context.dataIndex;
+                                var signal = modified_data[index]['Signal'];
+                                return signal === 'BUY' ? 'rgba(0, 143, 57)' : 'rgba(255, 0, 0, 1)';
+                            },
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        }]
+                        },
+                        options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Fecha'
+                            }
+                            },
+                            y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Señal'
+                            }
+                            }
+                        }
+                        }
+                    });
+
+                    intervalID = setInterval(function() {
+                        // Generar nuevos datos simulados
+                        const simulacion = generarSimulacionTrading();
+                        const modified_data = Object.values(simulacion.modified_data);
+
+                        // Actualizar los datos del gráfico
+                        signalChart.data.labels = modified_data.map(function(item) {
+                        return item['Date'];
+                        });
+
+                        signalChart.data.datasets[0].data = modified_data.map(function(item) {
+                        return item['Close'];
+                        });
+
+                        signalChart.data.datasets[0].pointBackgroundColor = function(context) {
+                        var index = context.dataIndex;
+                        var signal = modified_data[index]['Signal'];
+                        return signal === 'BUY' ? 'rgba(0, 143, 57)' : 'rgba(255, 0, 0, 1)';
+                        };
+
+                        // Actualizar el gráfico
+                        signalChart.update();
+                    }, 1000);
+                    //graficar(simulacion);
+                });
+
+                $('#stop').on('click', function(event) {
+                event.preventDefault();
+                
+                // Detener la simulación
+                clearInterval(intervalID);
+                });
+
+            })
+                
+            
+        </script>
         
         <!-- Bootstrap core JS-->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"></script>
         <!-- Third party plugin JS-->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>        <!-- Core theme JS-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>        
+        <!-- Core theme JS-->
         <script src="https://startbootstrap.github.io/startbootstrap-freelancer/js/scripts.js"></script>
     </body>
 </html>

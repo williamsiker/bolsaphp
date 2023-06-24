@@ -59,8 +59,8 @@ $conn->close();
         // Mostrar el mensaje de resultado en el lugar correspondiente
         echo "<p>$resultMessage</p>";
         ?> 
-        <img class="mb-4" src="./logo.png" alt="" width="100" height="60">
-        <h1 class="h3 mb-3 fw-normal">Registra tus Datos</h1>
+        <img class="mb-4" src="./imgl.png" alt="" width="100" height="60">
+        <h1 class="h3 mb-3 fw-normal">Registra Tus Datos</h1>
         <div class="form-floating">
         <input type="text" class="form-control" id="username" name="username" placeholder="Username">
         <label for="username">Usuario</label>
