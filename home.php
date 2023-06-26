@@ -68,9 +68,12 @@ if (!isset($_SESSION['username'])) {
 
                 <!-- Portfolio Grid Items-->
                  <!-- Button trigger modal -->
+                <h1 id="portafolioValue"></h1>
                 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal" data-animation="true">
                 Consultar Datos (API) - Simular Consulta
                 </button>
+
+                <br><br>
 
                 <button type="button" class="btn btn-primary" id="random">
                     Iniciar Simulacion (RANDOM)
@@ -80,8 +83,10 @@ if (!isset($_SESSION['username'])) {
                     Detener Simulacion (RANDOM)
                 </button>
 
-                <input type="number" id="rcapital" name="rcapital">
-                <label for="rcapital">Capital de Inicio (RANDOM)</label>
+                <br><br>
+
+                <input type="number" id="rcapital" name="rcapital" required>
+                <label for="rcapital">Capital de Inicio (RANDOM) </label>
 
 
                 <!-- Modal (API)-->
@@ -210,7 +215,7 @@ if (!isset($_SESSION['username'])) {
                     let endDate = formData.get('end_date');
                     let capital = formData.get('capital');
                     if (signalChart) {
-                                signalChart.destroy();
+                        signalChart.destroy();
                     }
                     $.ajax({
                         url: 'simular.php',
@@ -233,7 +238,7 @@ if (!isset($_SESSION['username'])) {
                                 data: {
                                     labels:[],
                                     datasets: [{
-                                        label: 'Precio Accion Random ',
+                                        label: 'Precio de la Accion ' + symbol,
                                         data: [],
                                         backgroundColor: 'rgba(0, 123, 255, 0.5)',
                                         borderColor: 'rgba(0, 123, 255, 1)',
@@ -268,6 +273,12 @@ if (!isset($_SESSION['username'])) {
                             // Actualizar la gráfica cada segundo
                             intervalID = setInterval(function() {
                                 if (response[currentIndex] && response[currentIndex]['Date']) {
+                                    if (response[currentIndex]['Signal'] === 'SELL') {
+                                        let portafolioValue = response[currentIndex]['Portfolio Value'];
+                                        console.log(portafolioValue);
+                                        let portafolioElement = document.getElementById('portafolioValue');
+                                        portafolioElement.textContent = 'Portafolio Value: ' + portafolioValue;
+                                    }
                                     // Agregar un punto al gráfico
                                     signalChart.data.labels.push(response[currentIndex]['Date']);
                                     signalChart.data.datasets[0].data.push(response[currentIndex]['Close']);
@@ -290,7 +301,6 @@ if (!isset($_SESSION['username'])) {
                 });
 
                 //Simulacion con funciones Random
-                
                 $('#random').on('click', function(event) {
                     event.preventDefault();
 
@@ -357,6 +367,7 @@ if (!isset($_SESSION['username'])) {
                             intervalID = setInterval(function() {
                                 if (currentIndex < modified_data.length) {
                                     // Agregar un punto al gráfico
+                                    // Verificar si la señal es 'SELL' y mostrar el valor del portafolio
                                     signalChart.data.labels.push(response[currentIndex]['Date']);
                                     signalChart.data.datasets[0].data.push(response[currentIndex]['Close']);
                                     let signalColor = response[currentIndex]['Signal'] === 'BUY' ? 'rgba(0, 143, 57)' : 'rgba(255, 0, 0, 1)';
